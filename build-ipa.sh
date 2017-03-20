@@ -58,7 +58,7 @@ readonly log_file="$HOME/Library/Logs/${script_basename}.log"
 # Print usage
 usage() {
   cat <<- EOF
-  $(bold Usage:) ${script_basename} [OPTION]... action
+  $(bold Usage:) ${script_basename} [OPTION] [--scheme|-s=SCHEME] [--publish|-p]
   编译当前工程,并生成ipa
 
   $(bold Options:)
@@ -66,13 +66,15 @@ usage() {
   -h, --help        Display this help and exit
 
   $(bold Actions:)
-  switch branch [source-branch]
+  --scheme|-s: 要编译的scheme
+  --publish|-p:编译成功后发布到fir
   $(bold Version:)
   ${version}
 EOF
   exit "${1:-0}"
 }
 
+PUSH_TO_FIR=false
 declare -a args=()
 for i in "$@"; do
   #echo $i
@@ -81,6 +83,8 @@ for i in "$@"; do
     -h|--help)      usage 0 >&2;    shift;;
 
     -v=*|--value=*) value="${i#*=}"; shift;;
+    -s=*|--scheme=*) SCHEME="${i#*=}"; shift;;
+    --publish|-p) PUSH_TO_FIR=true; shift;;
     # --flag) flag=true;   shift;;
     --*=*|-*=*)
       key="${i%=*}"; key=${key//-/}; value="${i#*=}";
@@ -110,28 +114,30 @@ xcodebuild_fix(){
 }
 
 main() {
-  WORKSPACE="BambooDownlaoder.xcworkspace"
-  SCHEME="BambooDownlaoder"
+  if [[ -z "${WORKSPACE:-}" ]]; then
+    # 尝试搜索当前目录下的xcworkspace文件
+    WORKSPACE="$(find . -name '*.xcworkspace' -depth 1)"
+    if [[ -z "$WORKSPACE" ]]; then
+      die "请指定xcworkspace"
+    else
+      echo "find: $WORKSPACE"
+    fi
+  fi
+
+  if [[ -z "${SCHEME:-}" ]]; then
+    # 尝试获取scheme
+    SCHEME=$(xcodebuild -list 2>/dev/null | pcregrep -M -o -e "(?:Schemes:\n\s+)\w+" | pcregrep "(?:^\s+)\w+" | sed -E "s/[[:space:]]//g")
+
+    if [[ -z "$SCHEME" ]]; then
+       die "请指定scheme"
+      else
+        echo "find: $SCHEME"
+    fi
+  fi
+
   CONFIG="Debug"
   CODE_SIGN_IDENTITY=""
   PROVISIONING_PROFILE=""
-
-  # 尝试搜索当前目录下的xcworkspace文件
-  WORKSPACE="$(find . -name '*.xcworkspace' -depth 1)"
-  if [[ -z "$WORKSPACE" ]]; then
-    die "请指定xcworkspace"
-  else
-    echo "find: $WORKSPACE"
-  fi
-
-  # 尝试获取scheme
-  SCHEME=$(xcodebuild -list 2>/dev/null | pcregrep -M -o -e "(?:Schemes:\n\s+)\w+" | pcregrep "(?:^\s+)\w+" | sed -E "s/[[:space:]]//g")
-
-  if [[ -z "$SCHEME" ]]; then
-     die "请指定scheme"
-    else
-      echo "find: $SCHEME"
-  fi
 
   STAMP="$(date '+%y%M%d%H%m%S')"
 
@@ -186,14 +192,21 @@ EOM
     -archivePath "$ArchivePath/$OUTNAME.xcarchive" \
     -exportOptionsPlist "${EXPORT_OPTIONS}" \
     -exportPath "$ArchivePath"
-  IPA_FILE=$(find "$ArchivePath" -name "*.ipa")
-  if [[ -f "${IPA_FILE}" ]]; then
-    echo "publish to fir.im"
-    "$HOME/.rbenv/shims/fir" publish --verbose \
-    --token=95756caaa025ca7c4641e663f904f80e \
-    "${IPA_FILE}" || die "publish failed"
+
+  echo "ipa: $ArchivePath/$OUTNAME.ipa"
+
+  if [[ "$PUSH_TO_FIR" == "true" ]]; then
+       IPA_FILE=$(find "$ArchivePath" -name "*.ipa")
+      if [[ -f "${IPA_FILE}" && -e "$HOME/.rbenv/shims/fir" ]]; then
+        echo "publish to fir.im"
+        "$HOME/.rbenv/shims/fir" publish --verbose \
+        --token=95756caaa025ca7c4641e663f904f80e \
+        "${IPA_FILE}" || die "publish failed"
+      else
+        die "${IPA_FILE} not exist"
+      fi
   else
-    die "${IPA_FILE} not exist"
+    open "$ArchivePath"
   fi
 }
 
