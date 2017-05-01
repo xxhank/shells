@@ -110,7 +110,8 @@ clean_up(){
 }
 
 xcodebuild_fix(){
-  xcodebuild "$@" 2>&1  | grep -v "Xcode/Plug-ins"
+  ## xcodebuild "$@" 2>&1  | grep -v "Xcode/Plug-ins"
+  xcodebuild -showsdks 2>&1|grep -v "/Plug-ins"
 }
 
 main() {
