@@ -164,7 +164,7 @@ main() {
         echo -n
     else
         echo "使用下面的命令安装必须的组件"
-        echo "brew install graphicsmagick"
+        echo "brew install imagemagick"
         echo "brew install ghostscript"
         exit 1
     fi
