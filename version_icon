@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+if [[ -z $INFOPLIST_FILE ]]; then
+    INFOPLIST_FILE=$1
+fi
+
+if [[ -z $SRCROOT ]]; then
+    SRCROOT="."
+fi
+
+if [[ -z $CONFIGURATION ]]; then
+    CONFIGURATION="Debug"
+fi
+
+if [[ -z $CONFIGURATION_BUILD_DIR ]]; then
+    CONFIGURATION_BUILD_DIR="/tmp"
+fi
+
+whobuilder=$(whoami)
+if [[ $CONFIGURATION == "Release" && ${whobuilder} != "tete" ]]; then
+   echo "Release" #exit 0
+fi
+
+command_exists () {
+    type "$1" >/dev/null 2>&1
+}
+
+commit=$(git rev-parse --short HEAD)
+now=$(date +"%m/%d %H:%M")
+
+
+builder=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${INFOPLIST_FILE}")
+if [[ ${whobuilder} == "tete" ]]; then
+    commit=${builder}
+    builder="0"
+    /usr/libexec/PlistBuddy -c "Set CFBundleVersion ${builder}" "${INFOPLIST_FILE}"
+fi
+
+# if [[ $builder =~ ^[0-9]+$ ]]; then
+#     echo "find number"
+#     builder="${builder}(Debug)"
+# fi
+
+# if [[ $CONFIGURATION == "Debug" ]]; then
+#     /usr/libexec/PlistBuddy -c "Set CFBundleVersion ${builder}" "${INFOPLIST_FILE}"
+# fi
+
+/usr/libexec/PlistBuddy -c "Set Distribution ${whobuilder}-${commit}-${now}" "${INFOPLIST_FILE}"
+
+CONVERT_EXEC="/usr/local/bin/convert"
+if command_exists "${CONVERT_EXEC}"; then
+    echo "convert exist"
+else
+    echo "convert not exist"
+cat <<-EOF
+    使用下面的命令安装必须的组件
+    brew install graphicsmagick
+    brew install ghostscript
+EOF
+    exit 0
+fi
+
+#branch=$(git rev-parse --abbrev-ref HEAD)
+builder=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${INFOPLIST_FILE}")
+version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "${INFOPLIST_FILE}")
+
+function processIcon() {
+    export PATH=$PATH:/usr/local/bin
+    base_path=$1
+    base_file=$(basename "$base_path")
+
+    echo "base_path:$base_path"
+
+    if [[ ! -e "$base_path" ]]; then
+        echo "$base_path not exist"
+        return
+    fi
+
+    target_file=$base_file
+    target_path=$2/${target_file} #"${CONFIGURATION_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/${target_file}"
+    echo "target_path:$target_path"
+
+    if [[ $CONFIGURATION == "Release" && "${whobuilder}" != "tete" ]]; then
+        echo "just copy"
+        cp "${base_path}" "$target_path"
+        return
+    fi
+
+    width=$(identify -format %w "${base_path}")
+
+    if [[ $width -le 60 ]]; then
+        echo "just copy"
+        cp "${base_path}" "$target_path"
+        return
+    fi
+
+    #height=$(echo "scale=2;$width/2.5" | bc) #"echo $((1.2 / 3))" #$(( $width / 2.5 ))
+    point=$(echo "$width/7" | bc)
+    if [[ $point -le 12 ]]; then
+        point=12
+    fi
+
+    height=$((${point}*3+3))
+    echo "size:${width}x${height} point:$point"
+
+    # echo "caption:${version} ${builder} ${commit}"
+
+    "${CONVERT_EXEC}" -background '#0008' -fill white -gravity south -size ${width}x${height}\
+    -pointsize $point caption:"${version}-${commit}\n${whobuilder}\n${now}"\
+    "${base_path}" +swap -gravity south -composite "${target_path}"
+}
+
+search_path=$2
+iconset_name=$3
+
+icon_folder=$(find "$search_path" -name "$iconset_name" -not -path "*FrameworkBuilder*")
+icon_bak_folder="./.bak/$(basename "$search_path")/$iconset_name"
+echo "search_path:$search_path"
+echo "icon_folder:$icon_folder"
+echo "bak_folder:$icon_bak_folder"
+
+if [[ ! -e $icon_bak_folder ]]; then
+    mkdir -p "$(dirname "$icon_bak_folder")"
+    cp -rf "$icon_folder" "$icon_bak_folder"
+fi
+
+#find $icon_folder -name "*.png" -exec processIcon {} \;
+
+while read -r icon;do
+    processIcon "$icon" "$icon_folder"
+done <<< "$(find "$icon_bak_folder" -name "*.png")"
+
+# for icon in $(find "$icon_bak_folder" -name "*.png"); do
+#     processIcon "$icon" "$icon_folder"
+# done
+
+#processIcon "超级视频AppIcon_180.png"
+#processIcon "Icon@2x_base.png"
+#processIcon "Icon-72_base.png"
+#processIcon "Icon-72@2x_base.png"

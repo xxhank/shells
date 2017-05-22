@@ -1,0 +1,105 @@
+#!/usr/bin/env sh
+
+function pause(){
+ read -p "$*"
+}
+
+function command_exists () {
+    type "$1" &> /dev/null ;
+}
+#if command_exists xcpretty ; then
+#    BUILDER=gym
+#fi
+
+function died(){
+    echo "$*"
+    exit 1
+}
+
+SELF=`basename $0`
+SELF_DIR=`dirname $0`
+
+function show_help(){
+cat <<-EOF
+usage:$SELF pod_url pod_name temp_dir
+EOF
+}
+
+## pick and check params
+POD_URL=$1
+POD_NAME=$2
+WORK_DIR=$3
+
+show_help
+if [[ -z $POD_URL || -z $POD_NAME ]]; then
+    exit
+fi
+
+if [[ -z $WORK_DIR ]]; then
+    WORK_DIR=/tmp/$(date +"%y%m%d-%H%M%S")
+fi
+
+## begin
+echo "WORK_DIR " ${WORK_DIR}
+
+if [[ ! -e $WORK_DIR ]]; then
+    mkdir -p $WORK_DIR
+fi
+
+cd $WORK_DIR
+
+if [[ ! -e $POD_NAME ]]; then
+   `git clone $POD_URL $POD_NAME`
+fi
+
+cd  $POD_NAME || die
+
+function find_pod_spec(){
+    #echo "try to find *.podspec or *.podspec.json"
+    POD_SPEC=`find . -name "*.podspec"`
+    POD_SPEC_JSON=`find . -name "*.podspec.json"`
+    if [[ -e "$POD_SPEC" ]]; then
+          echo "$POD_SPEC"
+    fi
+
+    if [[ -e "$POD_SPEC_JSON" ]]; then
+        echo "$POD_SPEC_JSON"
+    fi
+}
+
+echo "try to find *.podspec"
+POD_SPEC=`find_pod_spec`
+echo "$POD_SPEC"
+if [[ ! -e $POD_SPEC ]]; then
+    echo "copy podspec or podspec.json from cocoapods spec"
+    POD_SPEC=`pod spec which $POD_NAME` || died "$POD_NAME not exist"
+    if [[ $? == 0 ]]; then
+        cp $POD_SPEC .
+    fi
+fi
+
+POD_SPEC=`find_pod_spec`
+echo "$POD_SPEC"
+
+if [[ ! -e $POD_SPEC ]]; then
+    died "$POD_SPEC not exist"
+fi
+
+if [[ "$POD_SPEC" == *.podspec.json ]]; then
+    sed -i bak -E "s|(\"git\":[ \t]*)\".*\"|\1\"$POD_URL\"|" "$POD_SPEC"
+else
+    sed -i bak -E "s|(:git[ \t]*=>[ \t]*)(\"\|\')[^ ]+(\"\|\')|\1\"$POD_URL\"|" "$POD_SPEC"
+fi
+
+replace=$(sed -n -E '/"|:git/p' "$POD_SPEC" | grep letv.cn)
+if [[ $replace == "" ]]; then
+    died "replace failed"
+fi
+# "/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl" "$POD_SPEC" "$POD_SPEC.new"
+#
+# run first
+# pod repo add SARRS_SPEC git@legitlab.letv.cn:sarrs_client_ios_vendor/repo.git
+# pod repo add "SARRS_SPEC" $POD_URL || died "$POD_NAME add to repo failed"
+pod repo push --verbose --allow-warnings --sources=git@legitlab.letv.cn:sarrs_client_ios_vendor/repo.git SARRS_SPEC $POD_SPEC || died "$POD_NAME add to repo failed"
+cd ..
+# pause 'Press [Enter] key to continue...'

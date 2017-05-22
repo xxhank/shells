@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+function pause(){
+ read -p -r "$*"
+}
+
+function command_exists () {
+    type "$1" &> /dev/null ;
+}
+#if command_exists xcpretty ; then
+#    BUILDER=gym
+#fi
+
+died() { echo "$@" 1>&2 ; exit 1; }
+
+# SELF=$(basename $0)
+# SELF_DIR=$(dirname $0)
+
+function show_help(){
+cat <<-EOF
+usage:$SELF dump | install | print mobileprovision  | delete uuid
+    install 删除名称为"SARRS All Application","SARRS Development Tiancheng", "SARRS ADHOC"的Profiles
+EOF
+}
+
+TEMP_PLIST="/tmp/temp.plist"
+echo "$TEMP_PLIST"
+
+function dump_cert(){
+    CERT_FILE=$1
+    security cms -D -i "$CERT_FILE" > $TEMP_PLIST
+    /usr/libexec/PlistBuddy -c "print :UUID"\
+        -c "print :Name"\
+        -c "print :TeamName"\
+        -c "print :TeamIdentifier:0"\
+        -c "print :Entitlements:aps-environment"\
+        -c "print :Entitlements:application-identifier"\
+        $TEMP_PLIST
+}
+
+## pick and check params
+
+## begin
+METHOD=$1
+if [[ $METHOD == "delete" ]]; then
+    UUID=$2
+fi
+
+if [[ -z $METHOD ]]; then
+    show_help
+    exit 0
+fi
+
+if [[ $METHOD == "dump" ]]; then
+    FOLD="$HOME/Library/MobileDevice/Provisioning Profiles/"
+    cd "$FOLD" || died "$FOLD not exist"
+    for file in *.mobileprovision; do
+        dump_cert "$file"
+        # security cms -D -i "$file" > $TEMP_PLIST
+        # /usr/libexec/PlistBuddy -c "print :UUID" -c "print :Name" -c "print :TeamName" -c "print :TeamIdentifier:0" -c "print :Entitlements:aps-environment" $TEMP_PLIST
+        echo ""
+    done
+elif [[ $METHOD == "print" ]]; then
+    file="$2"
+    dump_cert "$file"
+    # TEMP_PLIST="/tmp/temp.plist"
+    # security cms -D -i "$file" > $TEMP_PLIST
+    # /usr/libexec/PlistBuddy -c "print :UUID" -c "print :Name" -c "print :TeamName" -c "print :TeamIdentifier:0" -c "print :Entitlements:aps-environment" $TEMP_PLIST
+        echo ""
+elif [[ $METHOD == "delete" ]]; then
+    rm -rf "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+elif [[ $METHOD == "install" ]]; then
+    FOLD="$HOME/Library/MobileDevice/Provisioning Profiles/"
+    cd "$FOLD" || died "$FOLD not exist"
+    for file in - *.mobileprovision; do
+        security cms -D -i "$file" > $TEMP_PLIST
+        NAME=$(/usr/libexec/PlistBuddy -c "print :Name" $TEMP_PLIST)
+        if [[ $NAME == "SARRS All Application" || $NAME == "SARRS Development Tiancheng" || $NAME == "SARRS ADHOC" ]]; then
+            rm -rf "$file"
+        fi
+    done
+else
+    show_help
+fi
+# pause 'Press [Enter] key to continue...'

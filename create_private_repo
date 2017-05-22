@@ -1,0 +1,121 @@
+#!/usr/bin/env sh
+
+function pause(){
+ read -p "$*"
+}
+
+function command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+function die(){
+    echo "$*"
+    exit 1
+}
+
+SELF=`basename $0`
+SELF_DIR=`dirname $0`
+
+cat <<-EOF
+usage:$SELF
+EOF
+
+# passed
+# http://git.letv.cn/sarrs-vendor/Alamofire.git
+# http://git.letv.cn/sarrs-vendor/SnapKit.git
+# http://git.letv.cn/sarrs-vendor/CryptoSwift.git
+# http://git.letv.cn/sarrs-vendor/ObjectMapper.git
+# http://git.letv.cn/sarrs-vendor/BlurImageProcessor.git
+# http://git.letv.cn/sarrs-vendor/FXBlurView.git
+# http://git.letv.cn/sarrs-vendor/RSKImageCropper.git
+# http://git.letv.cn/sarrs-vendor/ReactiveCocoa.git
+# http://git.letv.cn/sarrs-vendor/Result.git
+# http://git.letv.cn/sarrs-vendor/libwebp.git
+# http://git.letv.cn/sarrs-vendor/protobuf-swift.git
+# http://git.letv.cn/sarrs-vendor/GTMBase64.git
+# http://git.letv.cn/sarrs-vendor/pop.git
+# http://git.letv.cn/sarrs-vendor/MBProgressHUD.git
+# http://git.letv.cn/sarrs-vendor/UITableView-FDTemplateLayoutCell.git
+# http://git.letv.cn/sarrs-vendor/WebViewJavascriptBridge.git
+# http://git.letv.cn/sarrs-vendor/RealReachability.git
+# http://git.letv.cn/sarrs-vendor/SwiftTask.git
+# http://git.letv.cn/sarrs-vendor/CocoaLumberjack.git
+# http://git.letv.cn/sarrs-vendor/CocoaAsyncSocket.git
+# http://git.letv.cn/sarrs-vendor/SQLite.swift.git
+# http://git.letv.cn/sarrs-vendor/SDWebImage.git
+# http://git.letv.cn/sarrs-vendor/OpenUDID.git
+# http://git.letv.cn/sarrs-vendor/XCGLogger.git
+# http://git.letv.cn/sarrs-vendor/SwiftHEXColors.git
+# http://git.letv.cn/sarrs-vendor/UITableView-FDTemplateLayoutCell.git
+# http://git.letv.cn/wangchao9/Swifter2.git
+
+# failed
+# http://git.letv.cn/sarrs-vendor/MagicalRecord.git
+
+vendors=`cat <<-EOF
+http://git.letv.cn/sarrs-vendor/Alamofire.git
+EOF`
+
+DIR=$1
+if [[ -z $DIR ]]; then
+   DIR=.
+fi
+
+if [[ ! -e $DIR ]]; then
+    mkdir -p $DIR
+fi
+cd $DIR
+
+for i in $vendors; do
+    POD_NAME=`basename $i`
+    POD_NAME=${POD_NAME%.git}
+    # POD_NAME="Swifter2"
+    POD_REF_NAME="Swifter"
+    echo "$POD_NAME"
+    echo "$i"
+    # exit 0
+    if [[ ! -e $POD_NAME ]]; then
+         `git clone $i`
+    fi
+
+    cd $POD_NAME || die
+    echo "try to find *.podspec"
+    POD_SPEC=`find . -name "*.podspec"`
+    #echo "$POD_SPEC"
+    if [[ ! -e $POD_SPEC ]]; then
+        echo "try to find *.podspec.json"
+        POD_SPEC=`find . -name "*.podspec.json"`
+        if [[ ! -e $POD_SPEC ]]; then
+            echo "copy podspec or podspec.json from cocoapods spec"
+            cp `pod spec which $POD_REF_NAME` .
+        fi
+    fi
+
+    POD_SPEC=`find . -name "*.podspec"`
+    if [[ ! -e $POD_SPEC ]]; then
+        POD_SPEC=`find . -name "*.podspec.json"`
+    fi
+
+    if [[ ! -e $POD_SPEC ]]; then
+        die "$POD_SPEC not exist"
+    fi
+
+    if [[ "$POD_SPEC" == *.podspec.json ]]; then
+        # "git": "http://git.letv.cn/sarrs-vendor/FXBlurView.git"
+        sed -i bak -E "s|(\"git\":[ \t]*)\".*\"|\1\"$i\"|" "$POD_SPEC"
+    else
+        # :git => "http://git.letv.cn/sarrs-vendor/TextAttributes.git"
+        sed -i bak -E "s|(:git[ \t]*=>[ \t]*)(\"\|\')[^ ]+(\"\|\')|\1\"$i\"|" "$POD_SPEC"
+    fi
+
+    replace=$(sed -n -E '/"|:git/p' "$POD_SPEC" | grep git.letv.cn)
+    if [[ $replace == "" ]]; then
+        die "replace failed"
+    fi
+    # "/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl" "$POD_SPEC" "$POD_SPEC.new"
+    #
+    pod repo push --verbose --allow-warnings --sources=http://git.letv.cn/sarrs-vendor/SARRS-Repository SARRS $POD_SPEC || die "$POD_NAME add to repo failed"
+    cd ..
+done
+
+#pause 'Press [Enter] key to continue...'

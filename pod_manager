@@ -1,0 +1,50 @@
+#!/usr/bin/env sh
+
+function pause(){
+   read -p "$*"
+}
+
+function command_exists () {
+    type "$1" &> /dev/null ;
+}
+
+function die(){
+    echo "$*"
+    exit 1
+}
+
+SELF=`basename $0`
+SELF_DIR=`dirname $0`
+
+cat <<-EOF
+usage:$SELF install|update
+EOF
+
+POD_METHOD=$1
+if [[ -z ${POD_METHOD} ]]; then
+    POD_METHOD="update"
+fi
+
+if [[ ${POD_METHOD} == "install" ]]; then
+    RESET=true
+fi
+if [[ $RESET == "true" ]]; then
+    echo "will delete  *.xcworkspace, Pods"
+    rm -rf *.xcworkspace
+    rm -rf Pods
+    rm -rf Podfile.lock
+    if [[ ! -z ${POD_METHOD} ]]; then
+         POD_METHOD="install"
+    fi
+fi
+
+if [[ ${POD_METHOD} == "install" ]]; then
+    pod install --no-repo-update
+    open *.xcworkspace
+elif [[ ${POD_METHOD} == "update" ]]; then
+    pod update --no-repo-update
+    open *.xcworkspace
+else
+    echo ""
+fi
+# pause 'Press [Enter] key to continue...'
