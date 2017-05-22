@@ -1,140 +1,263 @@
 #!/usr/bin/env bash
+#
+# 给图标添加版本信息
+#
+#export LANG=C.UTF-8
+LANG=C.UTF-8
 
-if [[ -z $INFOPLIST_FILE ]]; then
-    INFOPLIST_FILE=$1
-fi
+STYLE_BOLD=$(tput bold)
+STYLE_UNDERLINE=$(tput sgr 0 1)
+STYLE_END=$(tput sgr0)
 
-if [[ -z $SRCROOT ]]; then
-    SRCROOT="."
-fi
+COLOR_PURPLE=$(tput setaf 171)
+COLOR_RED=$(tput setaf 1)
+COLOR_GREEN=$(tput setaf 76)
+COLOR_TAN=$(tput setaf 3)
+COLOR_BLUE=$(tput setaf 38)
 
-if [[ -z $CONFIGURATION ]]; then
-    CONFIGURATION="Debug"
-fi
+header()    { printf "${STYLE_BOLD}${COLOR_PURPLE}==========  %s  ==========${STYLE_END}\n" "$@"; }
+arrow()     { printf "➜ \n" "$@";}
+success()   { printf "${COLOR_GREEN}✔ %s${STYLE_END}\n" "$@"; }
+error()     { printf "${COLOR_RED}✖ %s${STYLE_END}\n" "$@"; }
+warning()   { printf "${COLOR_TAN}➜ %s${STYLE_END}\n" "$@"; }
+underline() { printf "${STYLE_UNDERLINE}${STYLE_BOLD}%s${STYLE_END}\n" "$@"; }
+bold()      { printf "${STYLE_BOLD}%s${STYLE_END}\n" "$@"; }
+note()      { printf "${STYLE_UNDERLINE}${STYLE_BOLD}${COLOR_BLUE}Note:${STYLE_END}  ${COLOR_BLUE}%s${STYLE_END}\n" "$@"; }
 
-if [[ -z $CONFIGURATION_BUILD_DIR ]]; then
-    CONFIGURATION_BUILD_DIR="/tmp"
-fi
-
-whobuilder=$(whoami)
-if [[ $CONFIGURATION == "Release" && ${whobuilder} != "tete" ]]; then
-   echo "Release" #exit 0
-fi
-
-command_exists () {
-    type "$1" >/dev/null 2>&1
+function die() {
+  local -r last_error=$?
+  local stack_paths=""
+  for ((i = ${#FUNCNAME[@]} - 1;i > 0;i--)); do
+      if [[ -z "${stack_paths}" ]]; then
+        stack_paths="${FUNCNAME[i]}"
+      else
+        stack_paths="${stack_paths}>${FUNCNAME[i]}"
+      fi
+  done
+  error "${stack_paths}:$*(${last_error})" >&2
+  clean_up ${last_error}
 }
 
-commit=$(git rev-parse --short HEAD)
-now=$(date +"%m/%d %H:%M")
-
-
-builder=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${INFOPLIST_FILE}")
-if [[ ${whobuilder} == "tete" ]]; then
-    commit=${builder}
-    builder="0"
-    /usr/libexec/PlistBuddy -c "Set CFBundleVersion ${builder}" "${INFOPLIST_FILE}"
-fi
-
-# if [[ $builder =~ ^[0-9]+$ ]]; then
-#     echo "find number"
-#     builder="${builder}(Debug)"
+# 获取管道状态码
+# if [[ ${PIPESTATUS[0]} != 0 ]]; then
+#   died "build workspace failed"
 # fi
 
-# if [[ $CONFIGURATION == "Debug" ]]; then
-#     /usr/libexec/PlistBuddy -c "Set CFBundleVersion ${builder}" "${INFOPLIST_FILE}"
-# fi
+IFS=$'\n\t'
 
-/usr/libexec/PlistBuddy -c "Set Distribution ${whobuilder}-${commit}-${now}" "${INFOPLIST_FILE}"
+trap '[[ -d "${temp_dir}" ]] && rm -r "${temp_dir}"' EXIT SIGHUP SIGINT SIGTERM SIGFPE
 
-CONVERT_EXEC="/usr/local/bin/convert"
-if command_exists "${CONVERT_EXEC}"; then
-    echo "convert exist"
-else
-    echo "convert not exist"
-cat <<-EOF
-    使用下面的命令安装必须的组件
-    brew install graphicsmagick
-    brew install ghostscript
+#set -o errexit
+set -o pipefail
+
+readonly version="1.0.0"
+readonly script_path="${BASH_SOURCE[0]}"
+readonly script_dir="$( cd "$( dirname "${script_path}" )" && pwd )"
+readonly script_name="${script_path##*/}"
+readonly script_basename="${script_name%\.*}"
+
+readonly temp_dir="$HOME/var/${script_basename}"  # $(mktemp -dt "${script_basename}")
+readonly log_file="$HOME/Library/Logs/${script_basename}.log"
+mkdir -p "${temp_dir}"
+
+echo "temp dir:${temp_dir}"
+
+# Print usage
+usage() {
+  cat <<- EOF
+  $(bold Usage:) ${script_basename} asset plist appid render|restore CONFIGURATION  build
+  a shell template
+
+  $(bold Options:)
+    -d, --debug       Runs script in BASH debug mode (set -x)
+    -h, --help        Display this help and exit
+    asset             程序icon路径
+    plist             程序的info.plist 用于获取版本号
+    appid             程序标记
+    CONFIGURATION     Release or Debug
+    render|restor     添加还是还原
+    build             程序Build号,为空则自动管理版本号
+  $(bold Version:)
+    ${version}
 EOF
-    exit 0
+  exit "${1:-0}"
+}
+
+declare -a args=()
+for i in "$@"; do
+  #echo $i
+  case $i in
+      -d|--debug)     debug=true;   shift;;
+      -h|--help)      usage 0 >&2;    shift;;
+
+      # -v=*|--value=*) value="${i#*=}"; shift;;
+      # --flag) flag=true;   shift;;
+      --*=*|-*=*)
+        key="${i%=*}"; key=${key//-/}; value="${i#*=}";
+        warning "unused: $(bold "$key $value")"
+        shift;;
+      *)
+        args=("${args[@]}" "$i") ;;
+  esac
+done
+
+if [[ ${debug:false} == true ]]; then
+  set -x
+  export PS4='+$BASH_SOURCE:$LINENO:$FUNCNAME: '
+  trap '(read -p "[$BASH_SOURCE:$LINENO] $BASH_COMMAND?")' DEBUG
+else
+  set -o nounset
 fi
 
-#branch=$(git rev-parse --abbrev-ref HEAD)
-builder=$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${INFOPLIST_FILE}")
-version=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "${INFOPLIST_FILE}")
+trap 'clean_up' EXIT SIGHUP SIGINT SIGTERM SIGFPE
 
-function processIcon() {
-    export PATH=$PATH:/usr/local/bin
-    base_path=$1
-    base_file=$(basename "$base_path")
+clean_up(){
+  echo -n #add your clean up code here
+}
 
-    echo "base_path:$base_path"
+command_exists() {
+  if [ "$(type -P "$1")" ]; then
+    return 0
+  fi
+  return 1
+}
 
-    if [[ ! -e "$base_path" ]]; then
-        echo "$base_path not exist"
-        return
-    fi
+# 给图标添加版本信息
+# render_info_on_image image-file capation
+render_on_image(){
+    image="$1"
+    capation="$2"
 
-    target_file=$base_file
-    target_path=$2/${target_file} #"${CONFIGURATION_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/${target_file}"
-    echo "target_path:$target_path"
-
-    if [[ $CONFIGURATION == "Release" && "${whobuilder}" != "tete" ]]; then
-        echo "just copy"
-        cp "${base_path}" "$target_path"
-        return
-    fi
-
-    width=$(identify -format %w "${base_path}")
-
-    if [[ $width -le 60 ]]; then
-        echo "just copy"
-        cp "${base_path}" "$target_path"
-        return
-    fi
-
-    #height=$(echo "scale=2;$width/2.5" | bc) #"echo $((1.2 / 3))" #$(( $width / 2.5 ))
+    # 获取图片宽度
+    width=$(identify -format %w "${image}")
+    # 图片太小
+    #if [[ $width -le 60 ]]; then
+    #    return
+    #fi
+    # 计算字体大小
     point=$(echo "$width/7" | bc)
     if [[ $point -le 12 ]]; then
         point=12
     fi
 
-    height=$((${point}*3+3))
-    echo "size:${width}x${height} point:$point"
+    # 文字高度
+    height=$((point*3+3))
+    # echo "size:${width}x${height} point:$point"
 
-    # echo "caption:${version} ${builder} ${commit}"
-
-    "${CONVERT_EXEC}" -background '#0008' -fill white -gravity south -size ${width}x${height}\
-    -pointsize $point caption:"${version}-${commit}\n${whobuilder}\n${now}"\
-    "${base_path}" +swap -gravity south -composite "${target_path}"
+    # 绘制
+    # shellcheck disable=SC2086
+    "${CONVERT_EXEC}" \
+    -background '#0008' \
+    -fill white \
+    -gravity south \
+    -size ${width}x${height}\
+    -pointsize $point \
+    caption:"$capation"\
+    "${image}" +swap \
+    -gravity south \
+    -composite "${image}"
 }
 
-search_path=$2
-iconset_name=$3
+main() {
+    CONVERT_EXEC="/usr/local/bin/convert"
+    if command_exists "${CONVERT_EXEC}"; then
+        echo -n
+    else
+        echo "使用下面的命令安装必须的组件"
+        echo "brew install graphicsmagick"
+        echo "brew install ghostscript"
+        exit 1
+    fi
 
-icon_folder=$(find "$search_path" -name "$iconset_name" -not -path "*FrameworkBuilder*")
-icon_bak_folder="./.bak/$(basename "$search_path")/$iconset_name"
-echo "search_path:$search_path"
-echo "icon_folder:$icon_folder"
-echo "bak_folder:$icon_bak_folder"
+    ASSET=${args[0]}
+    INFOPLIST_FILE=${args[1]}
+    APPID=${args[2]}
+    OP=${args[3]}
 
-if [[ ! -e $icon_bak_folder ]]; then
-    mkdir -p "$(dirname "$icon_bak_folder")"
-    cp -rf "$icon_folder" "$icon_bak_folder"
-fi
+    echo "operation: $OP"
+    if [[ -z ${CONFIGURATION:-""} ]]; then
+        if [[ ${#args[@]} -gt 4 ]]; then
+            CONFIGURATION=${args[4]}
+        fi
+        CONFIGURATION=${CONFIGURATION:-"Debug"}
+    fi
 
-#find $icon_folder -name "*.png" -exec processIcon {} \;
+    CI_SERVER=false
+    if [[ -z ${BUILD_NUMBER:-""} ]]; then
+        if [[ ${#args[@]} -gt 5 ]]; then
+            BUILD_NUMBER=${args[5]}
+        else
+            # 从文件中读取build号
+            BUILD_NUMBER=$(cat "$temp_dir/build")
+            if [[ -z $BUILD_NUMBER ]]; then
+                BUILD_NUMBER=1
+            fi
+            # build号加1,并保存
+            BUILD_NUMBER=$((BUILD_NUMBER + 1))
+            if [[ "$OP" == "render" ]]; then
+                echo $BUILD_NUMBER > "$temp_dir"/build
+            fi
+        fi
+    else
+        # jenkins 服务器会提供BUILD_NUMBER
+        CI_SERVER=true
+    fi
 
-while read -r icon;do
-    processIcon "$icon" "$icon_folder"
-done <<< "$(find "$icon_bak_folder" -name "*.png")"
+    echo "ci: $CI_SERVER $CONFIGURATION"
 
-# for icon in $(find "$icon_bak_folder" -name "*.png"); do
-#     processIcon "$icon" "$icon_folder"
-# done
+    if [[ ! -e "${INFOPLIST_FILE}" ]]; then
+        echo "${INFOPLIST_FILE} not exist"
+        exit 1
+    fi
 
-#processIcon "超级视频AppIcon_180.png"
-#processIcon "Icon@2x_base.png"
-#processIcon "Icon-72_base.png"
-#processIcon "Icon-72@2x_base.png"
+    # 保存版本号
+    if [[ "$OP" == "render" ]]; then
+        # 备份plist
+        cp -f "${INFOPLIST_FILE}"  "$temp_dir/$APPID.plist"
+        /usr/libexec/PlistBuddy -c "Set CFBundleVersion ${BUILD_NUMBER}" "${INFOPLIST_FILE}"
+    else
+        # 还原plist
+        cp -f "$temp_dir/$APPID.plist" "${INFOPLIST_FILE}"
+    fi
+
+    COMMIT=$(git rev-parse --short HEAD)
+    COMMIT=${COMMIT:0:4}
+    NOW=$(date +"%m/%d %H:%M")
+    #echo "commit:$COMMIT"
+    #echo "build:$BUILD_NUMBER"
+
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "${INFOPLIST_FILE}")
+    #echo "version:$VERSION"
+
+    WHO=$(whoami)
+    # 拼接图片上的内容
+    CAPTION="${VERSION}.${BUILD_NUMBER}-${COMMIT}\n${APPID}-${WHO}\n${NOW}"
+    echo "capation:$CAPTION"
+
+    # 备份图片
+    BACKUP="$APPID"
+    if [[ "$OP" == "render" ]]; then
+        #if [[ ! -d "$temp_dir/$BACKUP" ]]; then
+            mkdir -p "$temp_dir/$BACKUP"
+            cp  -rf "$ASSET/" "$temp_dir/$BACKUP/"
+        #fi
+    fi
+
+    # 从备份中复制图片
+    cp -rf "$temp_dir/$BACKUP/" "$ASSET/"
+
+    # Release 版本不为图标添加版本信息, ci server 服务器的版本仍然添加
+    if [[ $CONFIGURATION == "Release" && "$CI_SERVER" == "false" ]]; then
+        exit 0
+    fi
+
+    if [[ "$OP" == "render" ]]; then
+        while read -r image;do
+            # echo "image: $image"
+            # echo "caption: $CAPTION"
+            render_on_image "$image" "$CAPTION"
+        done <<< "$(find "$ASSET" -name "*.png")"
+    fi
+}
+
+main "$@"
