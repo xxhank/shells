@@ -188,7 +188,12 @@ main() {
             BUILD_NUMBER=${args[5]}
         else
             # 从文件中读取build号
-            BUILD_NUMBER=$(cat "$temp_dir/build")
+            if [[ -e "$temp_dir/build" ]]; then
+                BUILD_NUMBER=$(cat "$temp_dir/build")
+            else
+                BUILD_NUMBER=1
+            fi
+
             if [[ -z $BUILD_NUMBER ]]; then
                 BUILD_NUMBER=1
             fi
