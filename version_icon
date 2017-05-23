@@ -122,6 +122,10 @@ command_exists() {
   return 1
 }
 
+# imagemagick tools
+IM_CONVERT_EXE="/usr/local/bin/convert"
+IM_IDENTIFY_EXE="/usr/local/bin/identify"
+
 # 给图标添加版本信息
 # render_info_on_image image-file capation
 render_on_image(){
@@ -129,45 +133,65 @@ render_on_image(){
     capation="$2"
 
     # 获取图片宽度
-    canvas_width=$(identify -format %w "${image}")
-    # 图片太小
-    #if [[ $width -le 60 ]]; then
-    #    return
-    #fi
-    # 计算字体大小
-    font_point=$(echo "$canvas_width/7" | bc)
-    if [[ $point -le 12 ]]; then
-        point=12
+    canvas_width=$("${IM_IDENTIFY_EXE}" -format %w "${image}")
+    # 文字高度
+    canvas_height=$((canvas_width*2/5))
+    # 三行
+    font_point=$((canvas_height/3))
+
+    if [[ ${canvas_width} -le 60 ]]; then
+        # 图片太小
+        return
     fi
 
-    # 文字高度
-    canvas_height=$((font_point*3+3))
+    if [[ ${font_point} -le 10 ]]; then
+        font_point=10 # 设置最小字体为10
+        canvas_height=$((font_point*3+3))
+         # 绘制
+        # shellcheck disable=SC2086
+        "${IM_CONVERT_EXE}" \
+        -background 'rgba(0,0,0,0.6)' \
+        -fill white \
+        -size ${canvas_width}x \
+        -pointsize ${font_point} \
+        -interline-spacing -2 \
+        -gravity Center \
+        caption:"$capation" \
+        "${image}" \
+        +swap \
+        -gravity south \
+        -composite "${image}"
+    else
+        # 自动适应
+        # 绘制
+        # shellcheck disable=SC2086
+        "${IM_CONVERT_EXE}" \
+        -background 'rgba(0,0,0,0.6)' \
+        -fill white \
+        -size ${canvas_width}x${canvas_height} \
+        -interline-spacing -2 \
+        -gravity Center \
+        caption:"$capation" \
+        "${image}" \
+        +swap \
+        -gravity south \
+        -composite "${image}"
+    fi
 
     echo "size: ${canvas_width}x${canvas_height} ${font_point}"
 
-    # 绘制
-    # shellcheck disable=SC2086
-    "${CONVERT_EXEC}" \
-    -background '#0008' \
-    -fill white \
-    -gravity south \
-    -size ${canvas_width}x${canvas_height}\
-    -pointsize ${font_point} \
-    caption:"$capation"\
-    "${image}" +swap \
-    -gravity south \
-    -composite "${image}"
+
+
 }
 
 main() {
-    CONVERT_EXEC="/usr/local/bin/convert"
-    if command_exists "${CONVERT_EXEC}"; then
+    if command_exists "${IM_CONVERT_EXE}"; then
         echo -n
     else
         echo "使用下面的命令安装必须的组件"
         echo "brew install imagemagick"
         echo "brew install ghostscript"
-        exit 1
+        exit 0
     fi
 
     ASSET=${args[0]}
