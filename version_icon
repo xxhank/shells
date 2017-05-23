@@ -16,7 +16,7 @@ COLOR_TAN=$(tput setaf 3)
 COLOR_BLUE=$(tput setaf 38)
 
 header()    { printf "${STYLE_BOLD}${COLOR_PURPLE}==========  %s  ==========${STYLE_END}\n" "$@"; }
-arrow()     { printf "➜ \n" "$@";}
+arrow()     { printf "➜ %s\n" "$@";}
 success()   { printf "${COLOR_GREEN}✔ %s${STYLE_END}\n" "$@"; }
 error()     { printf "${COLOR_RED}✖ %s${STYLE_END}\n" "$@"; }
 warning()   { printf "${COLOR_TAN}➜ %s${STYLE_END}\n" "$@"; }
@@ -129,20 +129,21 @@ render_on_image(){
     capation="$2"
 
     # 获取图片宽度
-    width=$(identify -format %w "${image}")
+    canvas_width=$(identify -format %w "${image}")
     # 图片太小
     #if [[ $width -le 60 ]]; then
     #    return
     #fi
     # 计算字体大小
-    point=$(echo "$width/7" | bc)
+    font_point=$(echo "$canvas_width/7" | bc)
     if [[ $point -le 12 ]]; then
         point=12
     fi
 
     # 文字高度
-    height=$((point*3+3))
-    # echo "size:${width}x${height} point:$point"
+    canvas_height=$((font_point*3+3))
+
+    echo "size: ${canvas_width}x${canvas_height} ${font_point}"
 
     # 绘制
     # shellcheck disable=SC2086
@@ -150,8 +151,8 @@ render_on_image(){
     -background '#0008' \
     -fill white \
     -gravity south \
-    -size ${width}x${height}\
-    -pointsize $point \
+    -size ${canvas_width}x${canvas_height}\
+    -pointsize ${font_point} \
     caption:"$capation"\
     "${image}" +swap \
     -gravity south \
@@ -183,13 +184,22 @@ main() {
     fi
 
     CI_SERVER=false
+    # 从上级目录中读取
+    BUILD_NUMBER_FILE="${script_dir}/../BUILD_NUMBER"
+    if [[ -e BUILD_NUMBER_FILE ]]; then
+        BUILD_NUMBER=$(cat "${BUILD_NUMBER_FILE}")
+    fi
+
+    # 从环境变量中读取BUILD_NUMBER
     if [[ -z ${BUILD_NUMBER:-""} ]]; then
+        # 从参数中读取BUILD_NUMBER
         if [[ ${#args[@]} -gt 5 ]]; then
             BUILD_NUMBER=${args[5]}
         else
-            # 从文件中读取build号
-            if [[ -e "$temp_dir/build" ]]; then
-                BUILD_NUMBER=$(cat "$temp_dir/build")
+            # 读取自动管理的BUILD_NUMBER
+            AUTO_BUILD_NUMBER_FILE="$temp_dir/$APPID.BUILD_NUMBER"
+            if [[ -e "$AUTO_BUILD_NUMBER_FILE" ]]; then
+                BUILD_NUMBER=$(cat "$AUTO_BUILD_NUMBER_FILE")
             else
                 BUILD_NUMBER=1
             fi
@@ -200,7 +210,7 @@ main() {
             # build号加1,并保存
             BUILD_NUMBER=$((BUILD_NUMBER + 1))
             if [[ "$OP" == "render" ]]; then
-                echo $BUILD_NUMBER > "$temp_dir"/build
+                echo $BUILD_NUMBER > "$AUTO_BUILD_NUMBER_FILE"
             fi
         fi
     else
