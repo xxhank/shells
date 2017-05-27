@@ -253,7 +253,8 @@ main() {
     if [[ "$OP" == "render" ]]; then
         # 备份plist
         cp -f "${INFOPLIST_FILE}"  "$temp_dir/$APPID.plist"
-        /usr/libexec/PlistBuddy -c "Set CFBundleVersion ${BUILD_NUMBER}" "${INFOPLIST_FILE}"
+        # 默认开发Build号为0
+        /usr/libexec/PlistBuddy -c "Set CFBundleVersion 0" "${INFOPLIST_FILE}"
     else
         # 还原plist
         cp -f "$temp_dir/$APPID.plist" "${INFOPLIST_FILE}"
