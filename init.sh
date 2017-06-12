@@ -23,3 +23,17 @@ if [[ -e "$TARGET" ]]; then
 else
     ln -s "$SOURCE" "$TARGET"
 fi
+
+TARGET="$HOME/uncrustify.cfg"
+if [[ -e "$TARGET" ]]; then
+    if [[ -L "$TARGET" ]]; then
+        rm -rf "$TARGET"
+        ln -s "$SOURCE" "$TARGET"
+    else
+        mv "$TARGET" "$TARGET.bak"
+        ln -s "$SOURCE" "$TARGET"
+        echo "$TARGET is not a symbol link"
+    fi
+else
+    ln -s "$SOURCE" "$TARGET"
+fi
