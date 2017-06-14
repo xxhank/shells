@@ -6,6 +6,7 @@ WORKSPACE="Le123PhoneClient"
 SCHEME="sdsp"
 pushd "$ROOTDIR"
 
+#-derivedDataPath ./build
 XCODEBUILD="xcodebuild -workspace $WORKSPACE.xcworkspace -scheme $SCHEME -configuration Debug -sdk iphoneos"
 if [[ "$CLEAN" == "--clean" ]]; then
     $XCODEBUILD clean 2>&1 | grep -v "Plug-ins"
