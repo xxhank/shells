@@ -254,7 +254,9 @@ main() {
         # 备份plist
         cp -f "${INFOPLIST_FILE}"  "$temp_dir/$APPID.plist"
         # 默认开发Build号为0
-        /usr/libexec/PlistBuddy -c "Set CFBundleVersion 0" "${INFOPLIST_FILE}"
+        if [[ $CONFIGURATION != "Release" ]]; then
+            /usr/libexec/PlistBuddy -c "Set CFBundleVersion 0" "${INFOPLIST_FILE}"
+        fi
     else
         # 还原plist
         cp -f "$temp_dir/$APPID.plist" "${INFOPLIST_FILE}"
