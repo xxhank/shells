@@ -68,8 +68,15 @@ extern NSString* const Module${ModuleName};
 // extern NSString* const ${ModuleName}OptionsKey;
 // extern NSString* const ${ModuleName}OptionsKey;
 
-/// 模块工厂方法
+/// 模块工厂
 @interface ${ModuleName}Factory : NSObject
+/**
+ *  创建模块入口
+ *
+ *  @param options 创建模块需要的参数
+ *
+ *  @return nil表示无法创建模块入口
+ */
 + (UIViewController*)viewControllerWithOptions:(NSDictionary*)options;
 @end
 EOF)"
@@ -85,19 +92,32 @@ dump_to_file "$FILE" "$(cat <<-EOF
 //  Copyright © 2017年 $(whoami). All rights reserved.
 //
 #import "${ModuleName}Module.h"
+#import "${ModuleName}Business.h"
+#import "${ModuleName}ViewController.h"
 
 /// 模块名称
-NSString* const Module${ModuleName} = @"";
+NSString* const Module${ModuleName} = @"${ModuleName}";
 
 /// Options Key的定义
 // NSString* const ${ModuleName}OptionsKey = @"";
 // NSString* const ${ModuleName}OptionsKey = @"";
 // NSString* const ${ModuleName}OptionsKey = @"";
 
-/// 模块工厂方法
 @implementation ${ModuleName}Factory
 + (UIViewController*)viewControllerWithOptions:(NSDictionary*)options {
-    return nil;
+    BOOL isOptionsValid = NO;
+
+    /// 检查参数
+    isOptionsValid = YES;
+
+    if (!isOptionsValid) {
+        return nil;
+    }
+
+    ${ModuleName}ViewController*controller = [[${ModuleName}ViewController alloc] init];
+    ${ModuleName}Business      *business   = [[${ModuleName}Business alloc] init];
+    controller.business = business;
+    return controller;
 }
 @end
 EOF)"
