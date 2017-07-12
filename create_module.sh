@@ -243,4 +243,33 @@ dump_to_file "$FILE" "$(cat <<-EOF
 @end
 EOF)"
 
+# Present
+COMPNENT="Present"
+FILE="${COMPNENT}/${ModuleName}Present.h"
+dump_to_file "$FILE" "$(cat <<-EOF
+//
+//  ${ModuleName}Present.h
+//  SARRS
+//
+//  Created by $(whoami) on $(date +"%Y/%m/%d").
+//  Copyright © 2017年 $(whoami). All rights reserved.
+//
+
+#import <Foundation/Foundation.h>
+
+EOF)"
+
+FILE="${COMPNENT}/${ModuleName}Present.m"
+dump_to_file "$FILE" "$(cat <<-EOF
+//
+//  ${ModuleName}Present.m
+//  SARRS
+//
+//  Created by $(whoami) on $(date +"%Y/%m/%d").
+//  Copyright © 2017年 $(whoami). All rights reserved.
+//
+#import "${ModuleName}Present.h"
+
+EOF)"
+
 popd
