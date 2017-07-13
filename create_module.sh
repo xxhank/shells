@@ -22,6 +22,7 @@ mkdir -p "View"
 mkdir -p "APIs"
 mkdir -p "ViewModel"
 mkdir -p "Business"
+mkdir -p "Present"
 
 touch "View/README.md"
 touch "ViewModel/README.md"
