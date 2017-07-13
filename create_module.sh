@@ -171,6 +171,9 @@ dump_to_file "$FILE" "$(cat <<-EOF
     return self;
 }
 
+///  添加要追踪的属性
+DQMEMD_TRACE_CHILDREN(self.business);
+
 - (void)dealloc {
 }
 
@@ -238,9 +241,16 @@ dump_to_file "$FILE" "$(cat <<-EOF
 //  Copyright © 2017年 $(whoami). All rights reserved.
 //
 #import "${ModuleName}Business.h"
+#import "${ModuleName}Present.h"
 
 @implementation ${ModuleName}Business
 
+///  添加要追踪的属性
+/// DQMEMD_TRACE_CHILDREN();
+
+- (void)dealloc {
+    NSLogInfo(@"");
+}
 @end
 EOF)"
 
