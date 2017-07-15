@@ -111,9 +111,7 @@ NSString* const Module${ModuleName} = @"${ModuleName}";
     /// 检查参数
     isOptionsValid = YES;
 
-    if (!isOptionsValid) {
-        return nil;
-    }
+    NTYAssert(isOptionsValid, @"${ModuleName}: Invalid options. %@", options );
 
     ${ModuleName}ViewController*controller = [[${ModuleName}ViewController alloc] init];
     ${ModuleName}Business      *business   = [[${ModuleName}Business alloc] init];
@@ -202,13 +200,17 @@ DQMEMD_TRACE_CHILDREN(self.business);
     [super didReceiveMemoryWarning];
 }
 
+#pragma mark - Build UI
+
+#pragma mark - Load Data
+
 #pragma mark - 功能1
+#pragma mark  Delegate & DataSource
+#pragma mark Helper
 
 #pragma mark - 功能2
-
-#pragma mark - Delegate & DataSource
-
-#pragma mark - Helper
+#pragma mark  Delegate & DataSource
+#pragma mark Helper
 @end
 EOF)"
 
