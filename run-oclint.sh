@@ -4,6 +4,10 @@ ROOTDIR="$1"
 WORKSPACE="$2"
 SCHEME="$3"
 
+echo "dir: $ROOTDIR"
+echo "workspace: $WORKSPACE"
+echo "scheme: $SCHEME"
+
 if [[  -z "$WORKSPACE" ||  $WORKSPACE  == "-*" || -z "$SCHEME" ||  $SCHEME  == -* ]]; then
     echo "$(basename "$0") folder workspace scheme --analyze|--clean|--fix-html|--build"
     exit 0
@@ -35,8 +39,8 @@ case $i in
 
     --build)
     BUILD=YES
-    FIXHTML=YES
     ANALYZE=YES
+    FIXHTML=YES
     shift
     ;;
     *)
@@ -45,6 +49,21 @@ case $i in
 esac
 done
 
+if [[ "$CLEAN" == "YES" ]]; then
+    echo "will clean ..."
+fi
+
+if [[ "$BUILD" == "YES" ]]; then
+     echo "will build ..."
+fi
+
+if [[ "$ANALYZE" == "YES" ]]; then
+     echo "will analyze ..."
+fi
+
+if [[ "$FIXHTML" == "YES" ]]; then
+     echo "will beautify html ..."
+fi
 
 XCODEBUILD="xcodebuild -workspace $WORKSPACE.xcworkspace -scheme $SCHEME -configuration Debug -sdk iphoneos"
 
@@ -70,7 +89,7 @@ if [[ "$ANALYZE" == "YES" ]]; then
         mv -f ./build/reports/compilation_db.json ./compile_commands.json
     fi
     echo "analyze...."
-    "$script_dir/oclint/bin/oclint-json-compilation-database" -e sharepods -e Pods -e lib -- -o=lint.html -report-type=html
+    "$script_dir/oclint/bin/oclint-json-compilation-database" -e sharepods -e Pods -e lib -- -disable-rule=BitwiseOperatorInConditional  -o=lint.html -report-type=html
 fi
 
 if [[ $FIXHTML == "YES" ]]; then
