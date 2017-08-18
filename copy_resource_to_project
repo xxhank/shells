@@ -7,8 +7,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "hello world"
-
 readonly root_path="${SRCROOT}"
 
 # readonly root_path="/Users/dhl/workspace/git/ysdq-ios"
@@ -16,7 +14,7 @@ readonly common_assets_path="Resource/CommonUI.xcassets"
 readonly des_path="products/"$1"/resource/Assets-"$1".xcassets/merged"
 readonly src_path="products/"$1"/resource/Assets-custom-"$1".xcassets"
 
-echo -e "src_path = $src_path \n des_path = $des_path"
+echo -e "src_path = $src_path\ndes_path = $des_path"
 
 readonly common_path="$root_path/$common_assets_path"
 readonly script_src_path="$root_path/$src_path"
