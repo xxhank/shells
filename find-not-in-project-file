@@ -1,0 +1,78 @@
+#!/usr/bin/env ruby
+#-w warning
+require 'optparse'
+require 'xcodeproj'
+
+options = {}
+
+parser = OptionParser.new do|opts|
+    opts.banner = "Usage: #{File.basename(__FILE__)}  directory  project  sufix "
+
+    # opts.on('-proj project', '--project project', 'Project') do |project|
+    #     options[:project] = project;
+    # end
+
+    # opts.on('-dir directory', '--directory directory', 'Directory') do |directory|
+    #     options[:directory] = directory;
+    # end
+
+    # opts.on('-s sufix', '--sufix sufix', 'Sufix') do |sufix|
+    #     options[:sufix] = sufix;
+    # end
+
+    opts.on('-h', '--help', 'Displays Help') do
+        puts opts
+        exit
+    end
+end
+
+parser.parse!
+
+ROOT = ARGV[0]  # File.dirname(__FILE__)
+PROJNAME=ARGV[1]
+SUFFIX=ARGV[2]
+puts ROOT
+puts PROJNAME
+# exit 0
+project = Xcodeproj::Project.open("#{ROOT}/#{PROJNAME}.xcodeproj")
+
+main_target = nil
+unittest_target = nil
+project.native_targets.each do |target|
+  # puts "#{target.name} #{target.product_name} #{target.product_type}"
+  main_target = target if target.product_type.end_with?("application")
+  unittest_target = target if target.product_type.end_with?("unit-test")
+end
+
+unittest_group=nil
+project.groups.each do |group|
+    unittest_group = group if group.display_name == unittest_target.name
+end
+
+if unittest_target.nil? || unittest_group.nil?
+    puts "can not find any unit-test target"
+    exit 0
+end
+# puts main_target
+# puts unittest_target
+
+source_files = main_target.source_build_phase.files.to_a.map do |pbx_build_file|
+      if pbx_build_file.file_ref.nil?
+            ""
+      elsif pbx_build_file.file_ref.kind_of? String
+            pbx_build_file.file_ref
+      else
+            pbx_build_file.file_ref.real_path.to_s
+    end
+end.select do |path|
+  path.end_with?(".m", ".mm", ".swift")
+end.select do |path|
+  File.exists?(path)
+end
+
+Dir.glob("*/**/*.{m,mm}") do |filename|
+  unless filename.index("Pods") || filename.index("UnitTests") || filename.index("UITests") || filename.index("codestyle")
+    puts filename unless source_files.index { |x| x.index filename }
+  end
+end
+# puts "#{source_files}"
