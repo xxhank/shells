@@ -14,29 +14,31 @@ else
     exit 1
 fi
 
-FileName="${File/.a/}"
-echo "$FileName"
-archs=$(lipo -info "$File" | sed -E "s/.*are: //")
-echo "$archs"
+FileBaseName="$(basename "$File")"
+FileName="${FileBaseName/.a/}"
+echo "FileName: $FileName"
 
-mkdir -p "./$FileName"
+archs=$(lipo -info "$File" | sed -E "s/.*are: //")
+echo "archs: $archs"
+
+readonly temp_dir=$(mktemp -dt "${script_basename}")
+mkdir -p "${temp_dir}/$FileName"
 for arch in $archs; do
      #echo "word:$arch"
-     lipo -thin "$arch" "$File" -output "./$FileName/$arch"
+     lipo -thin "$arch" "$File" -output "${temp_dir}/$FileName/$arch"
      if [[ -z "$Objects" ]]; then
         echo "Contents:"
-        ar -t "./$FileName/$arch"
+        ar -t "${temp_dir}/$FileName/$arch"
      else
-        echo "Delete:"
-        ar -dv "./$FileName/$arch" $Objects
+        echo "Delete: ar -dv "${temp_dir}/$FileName/$arch" $Objects"
+        ar -dv "${temp_dir}/$FileName/$arch" $Objects
      fi
-
 done
 
-#cd "./$FileName" || exit 1
+#cd "${temp_dir}FileName" || exit 1
 libs=""
 for arch in $archs; do
-    libs="$libs $PWD/$FileName/$arch"
+    libs="$libs ${temp_dir}/$FileName/$arch"
 done
 #echo "$libs"
-lipo -create $libs -output "$PWD/$FileName/$File"
+lipo -create $libs -output "${temp_dir}/$FileName/$FileBaseName" &&  open "${temp_dir}/$FileName"
