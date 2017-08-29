@@ -10,9 +10,9 @@ set -o nounset
 readonly root_path="${SRCROOT}"
 
 # readonly root_path="/Users/dhl/workspace/git/ysdq-ios"
-readonly common_assets_path="Resource/CommonUI.xcassets"
-readonly des_path="products/"$1"/resource/Assets-"$1".xcassets/merged"
-readonly src_path="products/"$1"/resource/Assets-custom-"$1".xcassets"
+readonly common_assets_path="Le123PhoneClient/Resource/CommonUI.xcassets"
+readonly des_path="Le123PhoneClient/Targets/"$1"/resource/Assets-"$1".xcassets/merged"
+readonly src_path="Le123PhoneClient/Targets/"$1"/resource/Assets-custom-"$1".xcassets"
 
 echo -e "src_path = $src_path\ndes_path = $des_path"
 
