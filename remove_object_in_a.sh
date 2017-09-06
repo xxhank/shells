@@ -1,44 +1,46 @@
 #!/usr/bin/env bash
 if [[ $# -lt 1 ]]; then
-    echo "usage:$(basename "$0") lib object"
+    echo "usage:$(FrameworkFile "$0") framework-file|lib-file object1 object2 object3 ..."
     exit 1
 fi
 
-File="$1"; shift;
+FrameworkPath="$1"; shift;
 Objects="$*"
 
-if [[ -f "$File" ]]; then
+if [[ -f "$FrameworkPath" ]]; then
     echo -n
 else
-    echo "file:\"$File\" does not exist"
+    echo "\"$FrameworkPath\" does not exist"
     exit 1
 fi
 
-FileBaseName="$(basename "$File")"
-FileName="${FileBaseName/.a/}"
-echo "FileName: $FileName"
+FrameworkFile="$(FrameworkFile "$FrameworkPath")"
+FrameworkName="${FrameworkFile%%.*}" # 移除扩展名
+echo "FrameworkName: $FrameworkName"
 
-archs=$(lipo -info "$File" | sed -E "s/.*are: //")
+# lipo -info返回如下结果
+# Architectures in the fat FrameworkPath: LeTVMobilePlayer are: armv7 i386 x86_64 arm64
+archs=$(lipo -info "$FrameworkPath" | sed -E "s/.*are: //")
 echo "archs: $archs"
 
-readonly temp_dir=$(mktemp -dt "${script_basename}")
-mkdir -p "${temp_dir}/$FileName"
+readonly TEMP_DIR=$(mktemp -dt "${script_FrameworkFile}")
+mkdir -p "${TEMP_DIR}/$FrameworkName"
 for arch in $archs; do
      #echo "word:$arch"
-     lipo -thin "$arch" "$File" -output "${temp_dir}/$FileName/$arch"
+     lipo -thin "$arch" "$FrameworkPath" -output "${TEMP_DIR}/$FrameworkName/$arch"
      if [[ -z "$Objects" ]]; then
         echo "Contents:"
-        ar -t "${temp_dir}/$FileName/$arch"
+        ar -t "${TEMP_DIR}/$FrameworkName/$arch"
      else
-        echo "Delete: ar -dv "${temp_dir}/$FileName/$arch" $Objects"
-        ar -dv "${temp_dir}/$FileName/$arch" $Objects
+        echo "Delete: ar -dv "${TEMP_DIR}/$FrameworkName/$arch" $Objects"
+        ar -dv "${TEMP_DIR}/$FrameworkName/$arch" $Objects
      fi
 done
 
-#cd "${temp_dir}FileName" || exit 1
+#cd "${TEMP_DIR}FrameworkName" || exit 1
 libs=""
 for arch in $archs; do
-    libs="$libs ${temp_dir}/$FileName/$arch"
+    libs="$libs ${TEMP_DIR}/$FrameworkName/$arch"
 done
 #echo "$libs"
-lipo -create $libs -output "${temp_dir}/$FileName/$FileBaseName" &&  open "${temp_dir}/$FileName"
+lipo -create $libs -output "${TEMP_DIR}/$FrameworkName/$FrameworkFile" &&  open "${TEMP_DIR}/$FrameworkName"
