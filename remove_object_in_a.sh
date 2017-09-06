@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [[ $# -lt 1 ]]; then
-    echo "usage:$(FrameworkFile "$0") framework-file|lib-file object1 object2 object3 ..."
+    echo "usage:$(basename "$0") framework-file|lib-file object1 object2 object3 ..."
     exit 1
 fi
 

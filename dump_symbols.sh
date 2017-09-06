@@ -7,6 +7,11 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
+if [[ $# -lt 1 ]]; then
+    echo "usage:$(basename "$0") search-path"
+    exit 1
+fi
+
 readonly script_path="${BASH_SOURCE[0]}"
 readonly script_dir="$( cd "$( dirname "${script_path}" )" && pwd )"
 readonly script_name="${script_path##*/}"
