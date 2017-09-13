@@ -21,8 +21,7 @@ infer run --reactive \
  --infer-blacklist-path-regex "lib/.*"\
  --infer-blacklist-path-regex "Tests/.*"\
  --infer-blacklist-path-regex ".*\.framework/.*"\
- --infer-blacklist-path-regex ".*/Vendor/.*"\
- --infer-blacklist-path-regex "ALMediaKit/.*"\
+ --infer-blacklist-path-regex "Vendor/*.*"\
  -- $XCODEBUILD build 2>&1 | grep -v "Plug-ins"
 popd
 
