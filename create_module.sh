@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-
+#创建模块
+#usage:create_module module_name modules_folder
 set -o errexit
 set -o pipefail
 set -o nounset
@@ -8,25 +9,45 @@ readonly script_path="${BASH_SOURCE[0]}"
 readonly script_dir="$( cd "$( dirname "${script_path}" )" && pwd )"
 
 ModuleName="$1"
-ModuleRoot="$PWD/SARRS/Modules"
+
+# 不创建模块的目录黑名单
+BlackList=(\
+    "Interface"\
+    "ViewController"\
+    "View"\
+    "APIs"\
+    "ViewModel"\
+    "Model"\
+    "Business"\
+    "Present"\
+    "Common")
+for i in ${BlackList[@]}; do
+    if [[ "$ModuleName" == "$i" ]]; then
+        echo "skip $ModuleName"
+        exit 0
+    fi
+done
+
+echo "process $ModuleName"
+
+ModuleRoot="${2:-$PWD/SARRS/Modules}"
 if [[ ! -d "$ModuleRoot" ]]; then
     echo "$ModuleRoot not exist"
     exit 1
 fi
 
 mkdir -p "$ModuleRoot/$ModuleName"
-pushd  "$ModuleRoot/$ModuleName"
-mkdir -p "Interface"
-mkdir -p "ViewController"
-mkdir -p "View"
-mkdir -p "APIs"
-mkdir -p "ViewModel"
-mkdir -p "Business"
-mkdir -p "Present"
-
-touch "View/README.md"
-touch "ViewModel/README.md"
-touch "APIs/README.md"
+pushd  "$ModuleRoot/$ModuleName" > /dev/null
+Dirs=("Interface" "ViewController" "View" "APIs" "ViewModel" "Model" "Business" "Present")
+for i in ${Dirs[@]}; do
+    mkdir -p "$i"
+    touch "$i/README.md"
+    ## 移除多余的Readme
+    if [[ $(ls $i| wc -l) -gt 1 ]]; then
+        echo "remove $i/README.md"
+        rm -rf "$i/README.md"
+    fi
+done
 
 function dump_to_file(){
     FILE="$1"
@@ -41,6 +62,7 @@ function dump_to_file(){
 # interface
 COMPNENT="Interface"
 FILE="$COMPNENT/${ModuleName}Module.h"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}Module.h
@@ -84,6 +106,7 @@ EOF)"
 
 
 FILE="$COMPNENT/${ModuleName}Module.m"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}Module.m
@@ -111,7 +134,7 @@ NSString* const Module${ModuleName} = @"${ModuleName}";
     /// 检查参数
     isOptionsValid = YES;
 
-    NTYAssert(isOptionsValid, @"${ModuleName}: Invalid options. %@", options );
+    NTYRAssert(isOptionsValid, nil, @"${ModuleName}: Invalid options. %@", options );
 
     ${ModuleName}ViewController*controller = [[${ModuleName}ViewController alloc] init];
     ${ModuleName}Business      *business   = [[${ModuleName}Business alloc] init];
@@ -124,6 +147,7 @@ EOF)"
 # ViewController
 COMPNENT="ViewController"
 FILE="$COMPNENT/${ModuleName}ViewController.h"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}ViewController.h
@@ -143,6 +167,7 @@ dump_to_file "$FILE" "$(cat <<-EOF
 EOF)"
 
 FILE="$COMPNENT/${ModuleName}ViewController.m"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}ViewController.m
@@ -217,6 +242,7 @@ EOF)"
 # Business
 COMPNENT="Business"
 FILE="${COMPNENT}/${ModuleName}Business.h"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}Business.h
@@ -234,6 +260,7 @@ dump_to_file "$FILE" "$(cat <<-EOF
 EOF)"
 
 FILE="${COMPNENT}/${ModuleName}Business.m"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}Business.m
@@ -259,6 +286,7 @@ EOF)"
 # Present
 COMPNENT="Present"
 FILE="${COMPNENT}/${ModuleName}Present.h"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}Present.h
@@ -273,6 +301,7 @@ dump_to_file "$FILE" "$(cat <<-EOF
 EOF)"
 
 FILE="${COMPNENT}/${ModuleName}Present.m"
+rm -rf "$COMPNENT/README.md"
 dump_to_file "$FILE" "$(cat <<-EOF
 //
 //  ${ModuleName}Present.m
@@ -285,4 +314,4 @@ dump_to_file "$FILE" "$(cat <<-EOF
 
 EOF)"
 
-popd
+popd > /dev/null
