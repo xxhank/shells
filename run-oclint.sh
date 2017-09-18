@@ -89,7 +89,21 @@ if [[ "$ANALYZE" == "YES" ]]; then
         mv -f ./build/reports/compilation_db.json ./compile_commands.json
     fi
     echo "analyze...."
-    "$script_dir/oclint/bin/oclint-json-compilation-database" -e sharepods -e Pods -e lib  -e Vendor --  -disable-rule=BitwiseOperatorInConditional  -o=lint.html -report-type=html
+    "$script_dir/oclint/bin/oclint-json-compilation-database" \
+        -e sharepods -e Pods -e lib  -e Vendor --  \
+        -enable-clang-static-analyzer \
+        -disable-rule=BitwiseOperatorInConditional  \
+        -disable-rule=ConstantIfExpression\
+        -max-priority-1=999999 \
+        -max-priority-2=999999 \
+        -max-priority-3=999999 \
+        -rc CYCLOMATIC_COMPLEXITY=15 \
+        -rc NPATH_COMPLEXITY=300 \
+        -rc LONG_LINE=200 \
+        -rc LONG_METHOD=400 \
+        -rc LONG_VARIABLE_NAME=40 \
+        -rc NCSS_METHOD=200 \
+        -report-type=html -o=lint.html
 fi
 
 if [[ $FIXHTML == "YES" ]]; then
