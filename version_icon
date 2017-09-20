@@ -179,11 +179,14 @@ render_on_image(){
     fi
 
     echo "size: ${canvas_width}x${canvas_height} ${font_point}"
-
-
-
 }
 
+# $SRCROOT/shells/version_icon \
+# $SRCROOT/Le123PhoneClient/Targets/sdsp/resource/Assets-sdsp.xcassets/AppIcon-sdsp.appiconset \
+# $SRCROOT/Le123PhoneClient/Targets/sdsp/sdsp.plist \
+# sdsp render $CONFIGURATION
+
+# $SRCROOT/shells/version_icon targets-folder  target render|remove Release|Debug build-number
 main() {
     if command_exists "${IM_CONVERT_EXE}"; then
         echo -n
@@ -193,16 +196,17 @@ main() {
         echo "brew install ghostscript"
         exit 0
     fi
+    FOLDER=${args[0]}
+    APPID=${args[1]}
+    ASSET="${FOLDER}/${APPID}/resource/Assets-${APPID}.xcassets/AppIcon-${APPID}.appiconset"
+    INFOPLIST_FILE="${FOLDER}/${APPID}/${APPID}.plist"
 
-    ASSET=${args[0]}
-    INFOPLIST_FILE=${args[1]}
-    APPID=${args[2]}
-    OP=${args[3]}
+    OP=${args[2]}
 
     echo "operation: $OP"
     if [[ -z ${CONFIGURATION:-""} ]]; then
-        if [[ ${#args[@]} -gt 4 ]]; then
-            CONFIGURATION=${args[4]}
+        if [[ ${#args[@]} -gt 3 ]]; then
+            CONFIGURATION=${args[3]}
         fi
         CONFIGURATION=${CONFIGURATION:-"Debug"}
     fi
@@ -217,11 +221,11 @@ main() {
     # 从环境变量中读取BUILD_NUMBER
     if [[ -z ${BUILD_NUMBER:-""} ]]; then
         # 从参数中读取BUILD_NUMBER
-        if [[ ${#args[@]} -gt 5 ]]; then
-            BUILD_NUMBER=${args[5]}
+        if [[ ${#args[@]} -gt 4 ]]; then
+            BUILD_NUMBER=${args[4]}
         else
             # 读取自动管理的BUILD_NUMBER
-            AUTO_BUILD_NUMBER_FILE="$temp_dir/$APPID.BUILD_NUMBER"
+            AUTO_BUILD_NUMBER_FILE="$temp_dir/${APPID}.BUILD_NUMBER"
             if [[ -e "$AUTO_BUILD_NUMBER_FILE" ]]; then
                 BUILD_NUMBER=$(cat "$AUTO_BUILD_NUMBER_FILE")
             else
@@ -252,14 +256,14 @@ main() {
     # 保存版本号
     if [[ "$OP" == "render" ]]; then
         # 备份plist
-        cp -f "${INFOPLIST_FILE}"  "$temp_dir/$APPID.plist"
+        cp -f "${INFOPLIST_FILE}"  "$temp_dir/${APPID}.plist"
         # 默认开发Build号为0
         if [[ $CONFIGURATION != "Release" ]]; then
             /usr/libexec/PlistBuddy -c "Set CFBundleVersion 0" "${INFOPLIST_FILE}"
         fi
     else
         # 还原plist
-        cp -f "$temp_dir/$APPID.plist" "${INFOPLIST_FILE}"
+        cp -f "$temp_dir/${APPID}.plist" "${INFOPLIST_FILE}"
     fi
 
     COMMIT=$(git rev-parse --short HEAD)
@@ -277,7 +281,7 @@ main() {
     echo "capation:$CAPTION"
 
     # 备份图片
-    BACKUP="$APPID"
+    BACKUP="${APPID}"
     if [[ "$OP" == "render" ]]; then
         #if [[ ! -d "$temp_dir/$BACKUP" ]]; then
             mkdir -p "$temp_dir/$BACKUP"

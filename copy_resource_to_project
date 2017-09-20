@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-#
-#
-#
+#usage:merge_resource common targets-folder target
 
 set -o errexit
 set -o pipefail
@@ -10,26 +8,25 @@ set -o nounset
 readonly root_path="${SRCROOT}"
 
 # readonly root_path="/Users/dhl/workspace/git/ysdq-ios"
-readonly common_assets_path="Le123PhoneClient/Resource/CommonUI.xcassets"
-readonly des_path="Le123PhoneClient/Targets/"$1"/resource/Assets-"$1".xcassets/merged"
-readonly src_path="Le123PhoneClient/Targets/"$1"/resource/Assets-custom-"$1".xcassets"
+readonly common_assets_path="$1" #"Le123PhoneClient/Resource/CommonUI.xcassets"
+readonly target_folder="$2"
+readonly target="$3"
 
-echo -e "src_path = $src_path\ndes_path = $des_path"
+readonly target_special_path="${target_folder}/${target}/resource/Assets-custom-${target}.xcassets"
+readonly target_path="${target_folder}/${target}/resource/Assets-${target}.xcassets/merged"
+#readonly des_path="Le123PhoneClient/Targets/"$1"/resource/Assets-"$1".xcassets/merged"
+#readonly src_path="Le123PhoneClient/Targets/"$1"/resource/Assets-custom-"$1".xcassets"
 
-readonly common_path="$root_path/$common_assets_path"
-readonly script_src_path="$root_path/$src_path"
-readonly script_dest_path="$root_path/$des_path"
+echo -e "${common_assets_path} \n${target_special_path}  \n${target_path}"
 
-
-if [[ -e "$script_dest_path" ]]; then
-	rm -rf "$script_dest_path"
+if [[ -e "${target_path}" ]]; then
+	rm -rf "${target_path}"
 fi
 
-mkdir -p "$script_dest_path"
-echo '{"info" : {"version" : 1,"author" : "xcode"}}' > "$script_dest_path/Contents.json"
+mkdir -p "${target_path}"
+echo '{"info" : {"version" : 1,"author" : "xcode"}}' > "${target_path}/Contents.json"
 
 #find "$script_dest_path" ! -name "Contents.json" -depth 1 -exec rm -rf "{}" \;
 
-find $common_path -name "*.imageset" -exec cp -rf {} $script_dest_path \;
-find $script_src_path -name "*.imageset" -exec cp -rf {} $script_dest_path \;
-
+find ${common_assets_path} -name "*.imageset" -exec cp -rf {} ${target_path} \;
+find ${target_special_path} -name "*.imageset" -exec cp -rf {} ${target_path} \;
