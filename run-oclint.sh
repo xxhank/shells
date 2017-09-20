@@ -100,6 +100,7 @@ if [[ "$ANALYZE" == "YES" ]]; then
     -disable-rule=RedundantIfStatement\
     -disable-rule=UselessParentheses\
     -disable-rule=TooManyParameters\
+    -disable-rule=UnnecessaryElseStatement\
     -max-priority-1=999999 \
     -max-priority-2=999999 \
     -max-priority-3=999999 \
