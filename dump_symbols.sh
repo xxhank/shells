@@ -24,16 +24,17 @@ if [[ -z $SOURCE ]]; then
     exit -1;
 fi
 
+ARCH=armv7
 # find . \( -name "*.a" -or -name "*.framework" \)
 unwrap(){
     if [[ "$1" == *.framework ]]; then
         name=$(basename "$1")
         name=${name/.framework/}
         #echo "$1/$name"
-        nm -A -arch x86_64 "$1/$name"
+        nm -A -arch $ARCH "$1/$name"
     elif [[ "$1" == *.a ]]; then
         #echo -n
-        nm -A -arch x86_64 "$1"
+        nm -A -arch $ARCH "$1"
     else
         echo "unknown $1"
     fi
